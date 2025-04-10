@@ -3,6 +3,8 @@ import * as pulumiservice from "@pulumi/pulumiservice";
 import { local } from "@pulumi/command";
 import fetch from "node-fetch";
 
+import { setTag } from "./stackSettingsUtils"
+
 // Interface for StackSettings
 export interface StackSettingsArgs{
   ttlMinutes?: number,
@@ -35,35 +37,6 @@ export class StackSettings extends pulumi.ComponentResource {
     // So, just hit the Pulumi Cloud API set the tag and that way it is not deleted on destroy.
     let tagName = "delete_stack"
     let tagValue = args.deleteStack || "True"
-    const setTag = async () => {
-      const headers = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `token ${pulumiAccessToken}`
-      };
-    
-      // Delete the tag if it exists. Don't worry if it doesn't.
-      const deleteTagUrl = `https://api.pulumi.com/api/stacks/${stackFqdn}/tags/${tagName}`;
-      const deleteResponse = await fetch(deleteTagUrl, {
-        method: "DELETE",
-        headers,
-      })
-    
-      // Set the tag.
-      const setTagUrl = `https://api.pulumi.com/api/stacks/${stackFqdn}/tags`;
-      const setResponse = await fetch(setTagUrl, {
-          method: "POST",
-          body: `{"name":"${tagName}","value":"${tagValue}"}`,
-          headers,
-      })
-      if (!setResponse.ok) {
-          let errMessage = "";
-          try {
-              errMessage = await setResponse.text();
-          } catch { }
-          throw new Error(`failed to set ${tagName} tag for stack, ${org}/${project}/${stack}: ${errMessage}`);
-      } 
-    }
     setTag()
     
     //// Deployment Settings Management ////
