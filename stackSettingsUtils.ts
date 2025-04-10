@@ -1,5 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
-import { org, project, stack, pulumiAccessToken }  from "./stackSettingsConfig"
+import { npwStack, org, project, stack, pulumiAccessToken }  from "./stackSettingsConfig"
 const stackFqdn = `${org}/${project}/${stack}`
 
 export const setTag = async (tagName: string, tagValue: string) => {
