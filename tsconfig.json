@@ -15,6 +15,7 @@
   "files": [
       "index.ts",
       "stackSettings.ts",
-      "stackSettingsUtils.ts"
+      "stackSettingsUtils.ts",
+      "stackSettingsConfig.ts"
   ]
 }

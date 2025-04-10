@@ -3,7 +3,8 @@ import * as pulumiservice from "@pulumi/pulumiservice";
 import { local } from "@pulumi/command";
 import fetch from "node-fetch";
 
-import { setTag } from "./stackSettingsUtils"
+import { setTag, getDeploymentSettings } from "./stackSettingsUtils"
+import { npwStack, org, project, stack, pulumiAccessToken }  from "./stackSettingsConfig"
 
 // Interface for StackSettings
 export interface StackSettingsArgs{
@@ -20,16 +21,6 @@ export class StackSettings extends pulumi.ComponentResource {
   constructor(name: string, args: StackSettingsArgs, opts?: pulumi.ComponentResourceOptions) {
     super("pequod:index:stacksettings", name, args, opts);
 
-    // Settings used below
-    const npwStack = "dev" // This is the stack that NPW creates initially.
-    const org = "pequod" // Temporary. Will use getOrganization()
-    const project = pulumi.getProject()
-    const stack = pulumi.getStack() // this is the stack that is running
-    const stackFqdn = `${org}/${project}/${stack}`
-
-    // This may be the deployments automatically created access token or it may be one that is injected via config/environments
-    const pulumiAccessToken = process.env["PULUMI_ACCESS_TOKEN"] || "notokenfound"
-
     //// Purge Stack Tag ////
     // This stack tag indicates whether or not the purge automation should delete the stack.
     // Because the tag needs to remain on destroy and the provider balks if the stack tag already exists 
@@ -37,35 +28,11 @@ export class StackSettings extends pulumi.ComponentResource {
     // So, just hit the Pulumi Cloud API set the tag and that way it is not deleted on destroy.
     let tagName = "delete_stack"
     let tagValue = args.deleteStack || "True"
-    setTag()
+    setTag(tagName, tagValue)
     
     //// Deployment Settings Management ////
     // If a new stack is created by the user (vs via review stacks), get the current settings and 
     // configure the new stack's deployment settings based on the original settings. 
-    // Get current deployment settings
-    const getDeploymentSettings = async () => {
-      const headers = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `token ${process.env["PULUMI_ACCESS_TOKEN"]}`
-      };
-      const stackDeploymentSettingsUrl = `https://api.pulumi.com/api/stacks/${org}/${project}/${npwStack}/deployments/settings`;
-      const response = await fetch(stackDeploymentSettingsUrl, {
-          method: "GET",
-          headers,
-      })
-    
-      if (!response.ok) {
-          let errMessage = "";
-          try {
-              errMessage = await response.text();
-          } catch { }
-          throw new Error(`failed to get deployment settings for stack, ${org}/${project}/${npwStack}: ${errMessage}`);
-      } 
-    
-      const deploymentSettings: StackDeploymentSettings = await response.json();
-      return deploymentSettings
-    }
 
     // Get the current deployment settings and modify if needed.
     // But, only if this is NOT a review stack. Review stacks we just leave be.
@@ -147,35 +114,5 @@ export class StackSettings extends pulumi.ComponentResource {
   }
 }
 
-// Deployment Settings API Related //
-interface StackDeploymentSettings {
-  operationContext: OperationContext
-  sourceContext: SourceContext
-  gitHub: GitHub
-  source: string
-  cacheOptions: CacheOptions
-}
-interface OperationContext {
-  oidc?: object
-  environmentVariables?: pulumi.Input<{ [key: string]: pulumi.Input<string>; }>
-  options?: object
-}
-interface SourceContext {
-  git: Git
-}
-interface Git {
-  branch: string
-  repoDir?: string
-}
-interface GitHub {
-  repository: string
-  deployCommits: boolean
-  previewPullRequests: boolean
-  deployPullRequest?: number
-  pullRequestTemplate?: boolean
-  paths?: string[]
-}
-interface CacheOptions {
-  enable: boolean
-}
+
 
