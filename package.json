@@ -1,7 +1,7 @@
 {
     "name": "stacksettings",
     "description": "Abstraction for managing stack deployment and related settings.",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "dependencies": {
         "@pulumi/command": "^1.0.2",
         "@pulumi/pulumi": "^3.160.0",
