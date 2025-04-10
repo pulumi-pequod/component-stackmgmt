@@ -1,8 +1,8 @@
 import * as pulumi from "@pulumi/pulumi";
 import { org, project, stack, pulumiAccessToken }  from "./stackSettingsConfig"
+const stackFqdn = `${org}/${project}/${stack}`
 
 export const setTag = async (tagName: string, tagValue: string) => {
-  const stackFqdn = `${org}/${project}/${stack}`
   const headers = {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
