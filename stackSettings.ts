@@ -20,8 +20,7 @@ export class StackSettings extends pulumi.ComponentResource {
 
     // Settings used below
     const npwStack = "dev" // This is the stack that NPW creates initially.
-    // const org = "pequod" // Temporary. Will use getOrganization()
-    const org = pulumi.getOrganization()
+    const org = "pequod" // Temporary. Will use getOrganization()
     const project = pulumi.getProject()
     const stack = pulumi.getStack() // this is the stack that is running
     const stackFqdn = `${org}/${project}/${stack}`
