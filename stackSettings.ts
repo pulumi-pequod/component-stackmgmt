@@ -16,7 +16,7 @@ export interface StackSettingsArgs{
 export class StackSettings extends pulumi.ComponentResource {
 
   constructor(name: string, args: StackSettingsArgs, opts?: pulumi.ComponentResourceOptions) {
-    super("pequod:stackmgmt:stacksettings", name, args, opts);
+    super("pequod:index:stacksettings", name, args, opts);
 
     // Settings used below
     const npwStack = "dev" // This is the stack that NPW creates initially.
