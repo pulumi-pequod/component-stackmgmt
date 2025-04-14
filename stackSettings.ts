@@ -2,7 +2,7 @@ import * as pulumi from "@pulumi/pulumi";
 import * as pulumiservice from "@pulumi/pulumiservice";
 
 import { setTag, getDeploymentSettings } from "./stackSettingsUtils"
-import { npwStack, org, project, stack, pulumiAccessToken }  from "./stackSettingsConfig"
+import { npwStack, org, pulumiAccessToken }  from "./stackSettingsConfig"
 
 // Interface for StackSettings
 export interface StackSettingsArgs{
@@ -19,6 +19,8 @@ export class StackSettings extends pulumi.ComponentResource {
   constructor(name: string, args: StackSettingsArgs, opts?: pulumi.ComponentResourceOptions) {
     super("stackmgmt:index:stacksettings", name, args, opts);
 
+    const project = pulumi.getProject()
+    const stack = pulumi.getStack()
     const stackFqdn = `${org}/${project}/${stack}`
 
     //// Purge Stack Tag ////
