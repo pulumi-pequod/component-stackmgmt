@@ -1,8 +1,17 @@
 import * as pulumi from "@pulumi/pulumi";
-import { npwStack, org, project, stack, pulumiAccessToken }  from "./stackSettingsConfig"
-const stackFqdn = `${org}/${project}/${stack}`
+// import { npwStack, org, project, stack, pulumiAccessToken }  from "./stackSettingsConfig"
+// const stackFqdn = `${org}/${project}/${stack}`
 
 export const setTag = async (tagName: string, tagValue: string) => {
+  const npwStack = "dev" // This is the stack that NPW creates initially.
+  const org = "pequod" // Temporary. Will use getOrganization()
+  const project = pulumi.getProject()
+  const stack = pulumi.getStack() // this is the stack that is running
+  const stackFqdn = `${org}/${project}/${stack}`
+
+  // This may be the deployments automatically created access token or it may be one that is injected via config/environments
+  const pulumiAccessToken = process.env["PULUMI_ACCESS_TOKEN"] || "notokenfound"
+
   const headers = {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -34,6 +43,14 @@ export const setTag = async (tagName: string, tagValue: string) => {
 
 // Get current deployment settings
 export const getDeploymentSettings = async () => {
+  const npwStack = "dev" // This is the stack that NPW creates initially.
+  const org = "pequod" // Temporary. Will use getOrganization()
+  const project = pulumi.getProject()
+  const stack = pulumi.getStack() // this is the stack that is running
+  const stackFqdn = `${org}/${project}/${stack}`
+  // This may be the deployments automatically created access token or it may be one that is injected via config/environments
+  const pulumiAccessToken = process.env["PULUMI_ACCESS_TOKEN"] || "notokenfound"
+
   const headers = {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
