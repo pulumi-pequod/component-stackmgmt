@@ -1,7 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as pulumiservice from "@pulumi/pulumiservice";
-import { local } from "@pulumi/command";
-import fetch from "node-fetch";
 
 import { setTag, getDeploymentSettings } from "./stackSettingsUtils"
 import { npwStack, org, project, stack, pulumiAccessToken }  from "./stackSettingsConfig"
@@ -21,6 +19,8 @@ export class StackSettings extends pulumi.ComponentResource {
   constructor(name: string, args: StackSettingsArgs, opts?: pulumi.ComponentResourceOptions) {
     super("stackmgmt:index:stacksettings", name, args, opts);
 
+    const stackFqdn = `${org}/${project}/${stack}`
+
     //// Purge Stack Tag ////
     // This stack tag indicates whether or not the purge automation should delete the stack.
     // Because the tag needs to remain on destroy and the provider balks if the stack tag already exists 
@@ -28,7 +28,7 @@ export class StackSettings extends pulumi.ComponentResource {
     // So, just hit the Pulumi Cloud API set the tag and that way it is not deleted on destroy.
     let tagName = "delete_stack"
     let tagValue = args.deleteStack || "True"
-    setTag(tagName, tagValue)
+    setTag(stackFqdn, tagName, tagValue)
     
     //// Deployment Settings Management ////
     // If a new stack is created by the user (vs via review stacks), get the current settings and 
@@ -37,7 +37,8 @@ export class StackSettings extends pulumi.ComponentResource {
     // Get the current deployment settings and modify if needed.
     // But, only if this is NOT a review stack. Review stacks we just leave be.
     if (!(stack.includes(`pr-pulumi-${org}-${project}`))) {
-      const deploymentSettings = getDeploymentSettings().then(settings => { 
+      // Get the settings from the original NPW-created stack to use as a basis for new deployment settings for any (non-review) new stacks.
+      const deploymentSettings = getDeploymentSettings(`${org}/${project}/${npwStack}`).then(settings => { 
         // If the stack being run doesn't match the stack that NPW created in the first place, 
         // modify the deployment settings to point at a branch name that matches the stack name.
         if (stack != npwStack) {

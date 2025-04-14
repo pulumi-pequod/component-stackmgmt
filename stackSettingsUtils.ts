@@ -1,14 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
-// import { npwStack, org, project, stack, pulumiAccessToken }  from "./stackSettingsConfig"
-// const stackFqdn = `${org}/${project}/${stack}`
 
-export const setTag = async (tagName: string, tagValue: string) => {
-  const npwStack = "dev" // This is the stack that NPW creates initially.
-  const org = "pequod" // Temporary. Will use getOrganization()
-  const project = pulumi.getProject()
-  const stack = pulumi.getStack() // this is the stack that is running
-  const stackFqdn = `${org}/${project}/${stack}`
-
+export const setTag = async (stackFqdn: string, tagName: string, tagValue: string) => {
   // This may be the deployments automatically created access token or it may be one that is injected via config/environments
   const pulumiAccessToken = process.env["PULUMI_ACCESS_TOKEN"] || "notokenfound"
 
@@ -37,17 +29,12 @@ export const setTag = async (tagName: string, tagValue: string) => {
       try {
           errMessage = await setResponse.text();
       } catch { }
-      throw new Error(`failed to set ${tagName} tag for stack, ${org}/${project}/${stack}: ${errMessage}`);
+      throw new Error(`failed to set ${tagName} tag for stack, ${stackFqdn}: ${errMessage}`);
   } 
 }
 
 // Get current deployment settings
-export const getDeploymentSettings = async () => {
-  const npwStack = "dev" // This is the stack that NPW creates initially.
-  const org = "pequod" // Temporary. Will use getOrganization()
-  const project = pulumi.getProject()
-  const stack = pulumi.getStack() // this is the stack that is running
-  const stackFqdn = `${org}/${project}/${stack}`
+export const getDeploymentSettings = async (stackFqdn: string) => {
   // This may be the deployments automatically created access token or it may be one that is injected via config/environments
   const pulumiAccessToken = process.env["PULUMI_ACCESS_TOKEN"] || "notokenfound"
 
@@ -56,7 +43,7 @@ export const getDeploymentSettings = async () => {
     'Content-Type': 'application/json',
     'Authorization': `token ${process.env["PULUMI_ACCESS_TOKEN"]}`
   };
-  const stackDeploymentSettingsUrl = `https://api.pulumi.com/api/stacks/${org}/${project}/${npwStack}/deployments/settings`;
+  const stackDeploymentSettingsUrl = `https://api.pulumi.com/api/stacks/${stackFqdn}/deployments/settings`;
   const response = await fetch(stackDeploymentSettingsUrl, {
       method: "GET",
       headers,
@@ -67,7 +54,7 @@ export const getDeploymentSettings = async () => {
       try {
           errMessage = await response.text();
       } catch { }
-      throw new Error(`failed to get deployment settings for stack, ${org}/${project}/${npwStack}: ${errMessage}`);
+      throw new Error(`failed to get deployment settings for stack, ${stackFqdn}: ${errMessage}`);
   } 
 
   const deploymentSettings: StackDeploymentSettings = await response.json();
