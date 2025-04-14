@@ -8,7 +8,7 @@ import { npwStack, org, pulumiAccessToken }  from "./stackSettingsConfig"
 export interface StackSettingsArgs{
   ttlMinutes?: number,
   driftManagement?: string,
-  deleteStack?: string,
+  deleteStack?: string | boolean,
   teamAssignment?: string, 
   pulumiAccessToken?: pulumi.Output<string>,
 }
@@ -29,7 +29,9 @@ export class StackSettings extends pulumi.ComponentResource {
     // (which would be the case on a pulumi up after a destroy), using the pulumiservice provider for this tag is not feasible.
     // So, just hit the Pulumi Cloud API set the tag and that way it is not deleted on destroy.
     let tagName = "delete_stack"
-    let tagValue = args.deleteStack || "True"
+    // If deleteStack is not set, default to "True" since we generally want things cleaned up.
+    // Otherwise use the string version of the boolean or string that was passed in.
+    let tagValue = args.deleteStack?.toString() || "True"
     setTag(stackFqdn, tagName, tagValue)
     
     //// Deployment Settings Management ////
