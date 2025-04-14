@@ -19,7 +19,7 @@ export interface StackSettingsArgs{
 export class StackSettings extends pulumi.ComponentResource {
 
   constructor(name: string, args: StackSettingsArgs, opts?: pulumi.ComponentResourceOptions) {
-    super("pequod:index:stacksettings", name, args, opts);
+    super("stackmgmt:index:stacksettings", name, args, opts);
 
     //// Purge Stack Tag ////
     // This stack tag indicates whether or not the purge automation should delete the stack.
