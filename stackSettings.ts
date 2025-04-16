@@ -1,5 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as pulumiservice from "@pulumi/pulumiservice";
+import * as pulumitime from "@pulumiverse/time";
 
 import { setTag, getDeploymentSettings } from "./stackSettingsUtils"
 import { npwStack, org, pulumiAccessToken }  from "./stackSettingsConfig"
@@ -72,23 +73,16 @@ export class StackSettings extends pulumi.ComponentResource {
 
     //// TTL Schedule ////
     // Initialize resource options. 
-    const ttlMinutes = (8 * 60) // set schedule to be 8 hours from initial launch
-    const millisecondsToAdd = ttlMinutes * 60 * 1000
-    const nowTime = new Date()
-    const nowLinuxTime = nowTime.getTime()
-    const endLinuxTime = nowLinuxTime + millisecondsToAdd
-    const endDate = new Date(endLinuxTime)
-    // Tweak ISO time to match expected format for TtlSchedule resource.
-    // Basically takes it from YYYY-MM-DDTHH:MM:SS.mmmZ to YYYY-MM-DDTHH:MM:00Z 
-    // Note, the timestamp must end in `:00Z` as per https://github.com/pulumi/pulumi-pulumiservice/issues/452
-    const expirationTime = endDate.toISOString().slice(0,-7) + "00Z"
+    const ttlMinutes = args.ttlMinutes || (8 * 60) // set schedule to be 8 hours from initial launch
+    const ttlTime  = new pulumitime.Offset("ttltime", {offsetMinutes: ttlMinutes}, { parent: this })
     const ttlSchedule = new pulumiservice.TtlSchedule(`${name}-ttlschedule`, {
       organization: org,
       project: project,
       stack: stack,
-      timestamp: expirationTime,
+      timestamp: ttlTime.baseRfc3339,
       deleteAfterDestroy: false,
-    }, { parent: this, ignoreChanges: ["timestamp"], retainOnDelete: true }) //retainOnDelete is true to work-around this issue: https://github.com/pulumi/pulumi-pulumiservice/issues/451
+    }, { parent: this })
+    // }, { parent: this, ignoreChanges: ["timestamp"], retainOnDelete: true }) //retainOnDelete is true to work-around this issue: https://github.com/pulumi/pulumi-pulumiservice/issues/451
 
     //// Drift Schedule ////
     let remediation = true // assume we want to remediate
