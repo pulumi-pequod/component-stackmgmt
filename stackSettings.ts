@@ -74,12 +74,17 @@ export class StackSettings extends pulumi.ComponentResource {
     //// TTL Schedule ////
     // Initialize resource options. 
     const ttlMinutes = args.ttlMinutes || (8 * 60) // set schedule to be 8 hours from initial launch
-    const ttlTime  = new pulumitime.Offset("ttltime", {offsetMinutes: ttlMinutes}, { parent: this })
+    const ttlTimeRfc3339 = new pulumitime.Offset("ttltime", {offsetMinutes: ttlMinutes}, { parent: this }).baseRfc3339
+    // Need to convert to ISO 8601 format for the pulumiservice.TtlSchedule
+    const ttlTime = ttlTimeRfc3339.apply((rfc3339) => { 
+      const date = new Date(rfc3339)
+      return date.toISOString()
+    })
     const ttlSchedule = new pulumiservice.TtlSchedule(`${name}-ttlschedule`, {
       organization: org,
       project: project,
       stack: stack,
-      timestamp: ttlTime.baseRfc3339,
+      timestamp: ttlTime,
       deleteAfterDestroy: false,
     }, { parent: this })
     // }, { parent: this, ignoreChanges: ["timestamp"], retainOnDelete: true }) //retainOnDelete is true to work-around this issue: https://github.com/pulumi/pulumi-pulumiservice/issues/451
