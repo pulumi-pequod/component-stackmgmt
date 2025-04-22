@@ -47,7 +47,7 @@ export function buildDeploymentSettings(npwStack: string, stack: string, org: st
   // Get the settings from the original NPW-created stack or review stack to reuse as a basis for new deployment settings for any (non-review) new stacks.
   let baseStack = npwStack
   if (stack.includes(`pr-pulumi-${org}-${project}`)) {
-    let baseStack = stack
+    baseStack = stack
   }
   const baseDeploymentSettings = pulumiservice.DeploymentSettings.get("baseDeploymentSettings", `${org}/${project}/${baseStack}`, { parent: this })
 
