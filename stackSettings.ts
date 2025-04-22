@@ -2,7 +2,7 @@ import * as pulumi from "@pulumi/pulumi";
 import * as pulumiservice from "@pulumi/pulumiservice";
 import * as pulumitime from "@pulumiverse/time";
 
-import { setTag, getDeploymentSettings } from "./stackSettingsUtils"
+import { setTag, buildDeploymentSettings} from "./stackSettingsUtils"
 import { npwStack, org, pulumiAccessToken }  from "./stackSettingsConfig"
 
 // Interface for StackSettings
@@ -35,59 +35,25 @@ export class StackSettings extends pulumi.ComponentResource {
     setTag(stackFqdn, tagName, tagValue)
     
     //// Deployment Settings Management ////
-    // If a new stack is created by the user (vs via review stacks), get the current settings and 
-    // configure the new stack's deployment settings based on the original settings. 
+    // If a new stack is created by the user (e.g. `pulumi stack init pequod/test`) there are a couple of assumptions:
+    // - It tracks to a branch with the same name as the stack.
+    // - It always has the same deployment settings (other than the branch name) as the original NPW-created stack.
+    // Although this is somewhat restrictive, it is sufficient for the general use-case of creating new stacks.
+    const deploymentSettings: pulumiservice.DeploymentSettingsArgs = buildDeploymentSettings(npwStack, stack, org, project, pulumiAccessToken)
 
-    // Get the current deployment settings and modify if needed.
-    // But, only if this is NOT a review stack. Review stacks we just leave be.
-    if (!(stack.includes(`pr-pulumi-${org}-${project}`))) {
-      // Get the settings from the original NPW-created stack to use as a basis for new deployment settings for any (non-review) new stacks.
-      const deploymentSettings = getDeploymentSettings(`${org}/${project}/${npwStack}`).then(settings => { 
-        // If the stack being run doesn't match the stack that NPW created in the first place, 
-        // modify the deployment settings to point at a branch name that matches the stack name.
-        if (stack != npwStack) {
-          settings.sourceContext.git.branch = "refs/heads/"+stack
-        } 
-
-        // Set the stack's deployment settings with any changes from above.
-        // Maybe a no-op.
-        const deploySettings = new pulumiservice.DeploymentSettings(`${name}-deployment-settings`, {
-          organization: org,
-          project: project,
-          stack: stack,
-          github: settings.gitHub,
-          cacheOptions: {
-            enable: true // enable caching to speed up deployments
-          },
-          operationContext: {
-            // Add the access token from the environment as an env variable for the deployment.
-            // This overrides the deployment stack token to enable accessing the template stack's config for review stacks and to enable stack references (where needed) 
-            // Keeping for future reference, but this following code does not play well with the .NET SDK generation. It'll throw an error about type is not a string.
-            // environmentVariables: { ...settings.operationContext.environmentVariables, ...{PULUMI_ACCESS_TOKEN: pulumi.secret(pulumiAccessToken)}}
-            environmentVariables: { PULUMI_ACCESS_TOKEN: pulumi.secret(pulumiAccessToken) }
-          },
-          sourceContext: settings.sourceContext,
-        }, { parent: this, retainOnDelete: true }); // Retain on delete so that deploy actions are maintained.
-      })
-    }
+    // Set the stack's deployment settings based on what was returned by the buildDeploymentSettings function.
+    const deploySettings = new pulumiservice.DeploymentSettings(`${name}-deployment-settings`, deploymentSettings, {parent: this, retainOnDelete: true })
 
     //// TTL Schedule ////
-    // Initialize resource options. 
-    const ttlMinutes = args.ttlMinutes || (8 * 60) // set schedule to be 8 hours from initial launch
-    const ttlTimeRfc3339 = new pulumitime.Offset("ttltime", {offsetMinutes: ttlMinutes}, { parent: this }).baseRfc3339
-    // Need to convert to ISO 8601 format for the pulumiservice.TtlSchedule
-    const ttlTime = ttlTimeRfc3339.apply((rfc3339) => { 
-      const date = new Date(rfc3339)
-      return date.toISOString()
-    })
+    // Calculate the TTL time based on the TTL minutes passed in or default to 8 hours.
+    const ttlTime = new pulumitime.Offset("ttltime", {offsetMinutes: (args.ttlMinutes || (8*60))}, { parent: this }).rfc3339
     const ttlSchedule = new pulumiservice.TtlSchedule(`${name}-ttlschedule`, {
       organization: org,
       project: project,
       stack: stack,
       timestamp: ttlTime,
       deleteAfterDestroy: false,
-    }, { parent: this })
-    // }, { parent: this, ignoreChanges: ["timestamp"], retainOnDelete: true }) //retainOnDelete is true to work-around this issue: https://github.com/pulumi/pulumi-pulumiservice/issues/451
+    }, { parent: this, dependsOn: [deploySettings] }) 
 
     //// Drift Schedule ////
     let remediation = true // assume we want to remediate
@@ -100,7 +66,7 @@ export class StackSettings extends pulumi.ComponentResource {
       stack: stack,
       scheduleCron: "0 * * * *",
       autoRemediate: remediation,
-    }, {parent: this})
+    }, { parent: this, dependsOn: [deploySettings] }) 
 
     //// Team Stack Assignment ////
     // If no team name given, then assign to the "DevTeam"
