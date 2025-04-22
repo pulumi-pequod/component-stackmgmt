@@ -49,7 +49,7 @@ export function buildDeploymentSettings(npwStack: string, stack: string, org: st
   if (stack.includes(`pr-pulumi-${org}-${project}`)) {
     baseStack = stack
   }
-  const baseDeploymentSettings = pulumiservice.DeploymentSettings.get("baseDeploymentSettings", `${org}/${project}/${baseStack}`, { parent: this })
+  const baseDeploymentSettings = pulumiservice.DeploymentSettings.get("baseDeploymentSettings", `${org}/${project}/${baseStack}`)
 
   // Use what was in the base deployment settings.
   let branch = baseDeploymentSettings.sourceContext?.apply(sourceContext => sourceContext?.git?.branch || "refs/heads/main")
