@@ -2,7 +2,7 @@ import * as pulumi from "@pulumi/pulumi";
 import * as pulumiservice from "@pulumi/pulumiservice";
 import * as pulumitime from "@pulumiverse/time";
 
-import { setTag, buildDeploymentSettings} from "./stackSettingsUtils"
+import { setTag, buildDeploymentConfig} from "./stackSettingsUtils"
 import { npwStack, org, pulumiAccessToken }  from "./stackSettingsConfig"
 
 // Interface for StackSettings
@@ -39,34 +39,35 @@ export class StackSettings extends pulumi.ComponentResource {
     // - It tracks to a branch with the same name as the stack.
     // - It always has the same deployment settings (other than the branch name) as the original NPW-created stack.
     // Although this is somewhat restrictive, it is sufficient for the general use-case of creating new stacks.
-    const deploymentSettings: pulumiservice.DeploymentSettingsArgs = buildDeploymentSettings(npwStack, stack, org, project, pulumiAccessToken)
+    // Get the settings from the original NPW-created stack or review stack to reuse as a basis for new deployment settings for any (non-review) new stacks.
 
+    buildDeploymentConfig(npwStack, stack, org, project, pulumiAccessToken).then(deploymentConfig => {
     // Set the stack's deployment settings based on what was returned by the buildDeploymentSettings function.
-    const deploySettings = new pulumiservice.DeploymentSettings(`${name}-deployment-settings`, deploymentSettings, {parent: this, retainOnDelete: true })
+      const deploymentSettings = new pulumiservice.DeploymentSettings(`${name}-deployment-settings`, deploymentConfig, {parent: this, retainOnDelete: true})
+      //// TTL Schedule ////
+      // Calculate the TTL time based on the TTL minutes passed in or default to 8 hours.
+      const ttlTime = new pulumitime.Offset("ttltime", {offsetMinutes: (args.ttlMinutes || (8*60))}, { parent: this }).rfc3339
+      const ttlSchedule = new pulumiservice.TtlSchedule(`${name}-ttlschedule`, {
+        organization: org,
+        project: project,
+        stack: stack,
+        timestamp: ttlTime,
+        deleteAfterDestroy: false,
+      }, { parent: this, dependsOn: [deploymentSettings] }) 
 
-    //// TTL Schedule ////
-    // Calculate the TTL time based on the TTL minutes passed in or default to 8 hours.
-    const ttlTime = new pulumitime.Offset("ttltime", {offsetMinutes: (args.ttlMinutes || (8*60))}, { parent: this }).rfc3339
-    const ttlSchedule = new pulumiservice.TtlSchedule(`${name}-ttlschedule`, {
-      organization: org,
-      project: project,
-      stack: stack,
-      timestamp: ttlTime,
-      deleteAfterDestroy: false,
-    }, { parent: this, dependsOn: [deploySettings] }) 
-
-    //// Drift Schedule ////
-    let remediation = true // assume we want to remediate
-    if ((args.driftManagement) && (args.driftManagement != "Correct")) {
-      remediation = false // only do drift detection
-    }
-    const driftSchedule = new pulumiservice.DriftSchedule(`${name}-driftschedule`, {
-      organization: org,
-      project: project,
-      stack: stack,
-      scheduleCron: "0 * * * *",
-      autoRemediate: remediation,
-    }, { parent: this, dependsOn: [deploySettings] }) 
+      //// Drift Schedule ////
+      let remediation = true // assume we want to remediate
+      if ((args.driftManagement) && (args.driftManagement != "Correct")) {
+        remediation = false // only do drift detection
+      }
+      const driftSchedule = new pulumiservice.DriftSchedule(`${name}-driftschedule`, {
+        organization: org,
+        project: project,
+        stack: stack,
+        scheduleCron: "0 * * * *",
+        autoRemediate: remediation,
+      }, { parent: this, dependsOn: [deploymentSettings] }) 
+    })
 
     //// Team Stack Assignment ////
     // If no team name given, then assign to the "DevTeam"
