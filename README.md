@@ -1,7 +1,7 @@
 # component-stacksettings
 Pulumi component that handles Pequod-related stack settings.
 
-## Inputs
+# Inputs
 
 * ttlMinutes (Optional): Number of minutes to wait before destroying the stack. Defaults to 8 hours.
 * driftManagement (Optional): Set to `Correct` to correct drift if detected. Set to anything else to just detect drift. Defaults to `Correct`.
@@ -9,12 +9,12 @@ Pulumi component that handles Pequod-related stack settings.
 * teamAssignment (Optional): Pulumi Team the stack should be assigned to. Defaults to `DevTeam`.
 * pulumiAccessToken (Optional): A Pulumi access token to use for the stack's Deployment settings. Defaults to a `DevTeam` team token.
 
-## Outputs
+# Outputs
 
 None.
 
-## Usage
-### Specify Package in `Pulumi.yaml`
+# Usage
+## Specify Package in `Pulumi.yaml`
 
 Add the following to your `Pulumi.yaml` file:
 Note: If no version is specified, the latest version will be used.
@@ -24,9 +24,9 @@ packages:
   stackmgmt: https://github.com/pulumi-pequod/component-stackmgmt[@vX.Y.Z]
 ``` 
 
-### Use SDK in Program
+## Use SDK in Program
 
-#### Python
+### Python
 ```
 from pulumi_pequod_stackmgmt import StackSettings, StackSettingsArgs
 
@@ -35,21 +35,21 @@ stackmgmt = StackSettings("my-stacksettings",
                         drift_management=config.driftManagement)
 ```
 
-#### Typescript
+### Typescript
 ```
 import { StackSettings } from "@pulumi-pequod/stackmgmt";
 
 const stackmgmt = new StackSettings(baseName, {driftManagement: config.get("driftManagement")})
 ```
 
-#### Dotnet
+### Dotnet
 ```
 using PulumiPequod.Stackmgmt;
 
 var stackSettings = new StackSettings("stack-settings");
 ```
 
-#### YAML
+### YAML
 ```
   stacksettings:
     type: stackmgmt:StackSettings
