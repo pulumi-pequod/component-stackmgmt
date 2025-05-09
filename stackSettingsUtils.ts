@@ -78,10 +78,15 @@ export const buildDeploymentConfig = async (npwStack: string, stack: string, org
 
     // Use what was in the base deployment settings.
     let branch = baseDeploymentSettings.sourceContext.git?.branch || "refs/heads/main"
-    // But, if this is a user-created stack, then we need to modify the source context settings to point at a branch name that matches the stack name.
-    if (userCreatedStack) {
-      branch = "refs/heads/"+stack
-    }
+
+    ///// Given the new "New Stack Wizard" capability, we can't assume that the stack name is the same as the branch name.
+    ///// So this logic is being disabled for now. 
+    ///// If you create a new stack on the command line and it has it's own branch, then you'll need to update the branch in the deployment settings in the UI for the time being.
+    ///// TODO: Come up with a better flow that works for NSW and CLI created stacks.
+    // // But, if this is a user-created stack, then we need to modify the source context settings to point at a branch name that matches the stack name.
+    // if (userCreatedStack) {
+    //   branch = "refs/heads/"+stack
+    // }
 
     // Carry over the github settings as-is
     const githubSettingsStringified:pulumi.Output<string> = pulumi.jsonStringify({
