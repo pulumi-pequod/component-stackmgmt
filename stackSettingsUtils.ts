@@ -67,17 +67,10 @@ export const buildDeploymentConfig = async (npwStack: string, stack: string, org
   // So we do the same.
   const baseStack = npwStack
 
-  // // Figure out if stack is created by user (e.g. pulumi stack init ...)
-  // let userCreatedStack = false
-  // if ((stack != npwStack) && !(stack.includes(`pr-pulumi-${org}-${project}`))) {
-  //   userCreatedStack = true
-  // }
-
-  // // Get the settings from the original NPW-created stack or review stack to reuse as a basis for new deployment settings for any (non-review) new stacks.
-  // let baseStack = npwStack
-  // if (stack.includes(`pr-pulumi-${org}-${project}`)) {
-  //   baseStack = stack
-  // }
+  // Get the deployment settings from the original stack and use them as a basis for tweaking the stack's deployment settings.
+  // The main tweaks are:
+  // - enable caching
+  // - add the PULUMI_ACCESS_TOKEN as an environment variable for the deployment so it has the permissions needed to access other stacks.
   const deploymentConfig = getDeploymentSettings(org, project, baseStack).then(baseDeploymentSettings => {
 
     // Use what was in the base deployment settings.

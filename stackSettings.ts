@@ -25,17 +25,12 @@ export class StackSettings extends pulumi.ComponentResource {
     const stackFqdn = `${org}/${project}/${stack}`
 
     //// Deployment Settings Management ////
-    // If a new stack is created by the user (e.g. `pulumi stack init pequod/test`) there are a couple of assumptions:
-    // - It tracks to a branch with the same name as the stack.
-    // - It always has the same deployment settings (other than the branch name) as the original NPW-created stack.
-    // Although this is somewhat restrictive, it is sufficient for the general use-case of creating new stacks.
-    // Get the settings from the original NPW-created stack or review stack to reuse as a basis for new deployment settings for any (non-review) new stacks.
-
-    // This is the value for the delete_stack tag that is set on the stack.
-    // It varies depending on whether the stack is no-code or not
-    var deleteStackTagValue: string 
-
     buildDeploymentConfig(npwStack, stack, org, project, pulumiAccessToken).then(deploymentConfig => {
+
+      // This is the value for the delete_stack tag that is set below on the stack. 
+      // It varies depending on whether the stack is no-code or not
+      var deleteStackTagValue: string 
+
       // Check if this is a no-code deployment. If not, then we need to manage the deployment settings.
       if (deploymentConfig.sourceContext) {
         // Non-no-code so we need to manage the purge settings.
