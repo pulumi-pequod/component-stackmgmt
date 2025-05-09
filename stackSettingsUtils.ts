@@ -79,10 +79,8 @@ export const buildDeploymentConfig = async (npwStack: string, stack: string, org
   // const deploymentConfig = getDeploymentSettings(org, project, baseStack).then(baseDeploymentSettings => {
   getDeploymentSettings(org, project, baseStack).then(baseDeploymentSettings => {
 
-    pulumi.log.info(`Base deployment settings for stack ${baseStack} are: ${JSON.stringify(baseDeploymentSettings)}`)
-
     // This is not a no-code deployment so we need to manage the deployment settings. 
-    if (baseDeploymentSettings.sourceContext.git?.branch) {
+    if (baseDeploymentSettings.sourceContext.git) {
 
       // Use what was in the base deployment settings.
       let branch = baseDeploymentSettings.sourceContext.git?.branch || "refs/heads/main"
@@ -130,8 +128,8 @@ export const buildDeploymentConfig = async (npwStack: string, stack: string, org
         }
       }
     } 
+    return(deploymentConfig)
   })
-  pulumi.log.info(`Deployment settings being returned are: ${JSON.stringify(deploymentConfig)}`)
   return(deploymentConfig)
 }
 
