@@ -24,16 +24,6 @@ export class StackSettings extends pulumi.ComponentResource {
     const stack = pulumi.getStack()
     const stackFqdn = `${org}/${project}/${stack}`
 
-    //// Purge Stack Tag ////
-    // This stack tag indicates whether or not the purge automation should delete the stack.
-    // Because the tag needs to remain on destroy and the provider balks if the stack tag already exists 
-    // (which would be the case on a pulumi up after a destroy), using the pulumiservice provider for this tag is not feasible.
-    // So, just hit the Pulumi Cloud API set the tag and that way it is not deleted on destroy.
-    let deleteStackTagName = "delete_stack"
-    // If deleteStack is not set, default to "True" since we generally want things cleaned up.
-    let tagValue = args.deleteStack || "True"
-    setTag(stackFqdn, deleteStackTagName, tagValue)
-    
     //// Deployment Settings Management ////
     // If a new stack is created by the user (e.g. `pulumi stack init pequod/test`) there are a couple of assumptions:
     // - It tracks to a branch with the same name as the stack.
@@ -41,16 +31,31 @@ export class StackSettings extends pulumi.ComponentResource {
     // Although this is somewhat restrictive, it is sufficient for the general use-case of creating new stacks.
     // Get the settings from the original NPW-created stack or review stack to reuse as a basis for new deployment settings for any (non-review) new stacks.
 
+    // This is the value for the delete_stack tag that is set on the stack.
+    // It varies depending on whether the stack is no-code or not
+    var deleteStackTagValue: string 
+
     buildDeploymentConfig(npwStack, stack, org, project, pulumiAccessToken).then(deploymentConfig => {
       // Check if this is a no-code deployment. If not, then we need to manage the deployment settings.
       if (deploymentConfig) { // it's not a no-code deployment
+        // Non-no-code so we need to manage the purge settings.
+        deleteStackTagValue = args.deleteStack || "True"
         // Set the stack's deployment settings based on what was returned by the buildDeploymentSettings function.
         const deploymentSettings = new pulumiservice.DeploymentSettings(`${name}-deployment-settings`, deploymentConfig, {parent: this, retainOnDelete: true})
       } else {
         // Need to set the delete_stack tag to "StackOnly" to prevent the purge automation from trying to delete the repo which points at the 
         // templates repo - we definitely don't want to delete the templates repo.
-        setTag(stackFqdn, deleteStackTagName, "StackOnly")
+        deleteStackTagValue = "StackOnly"
       }
+
+      //// Purge Stack Tag ////
+      // This stack tag indicates whether or not the purge automation should delete the stack.
+      // Because the tag needs to remain on destroy and the provider balks if the stack tag already exists 
+      // (which would be the case on a pulumi up after a destroy), using the pulumiservice provider for this tag is not feasible.
+      // So, just hit the Pulumi Cloud API set the tag and that way it is not deleted on destroy.
+      const deleteStackTagName = "delete_stack"
+      setTag(stackFqdn, deleteStackTagName, deleteStackTagValue)
+
       //// TTL Schedule ////
       // Calculate the TTL time based on the TTL minutes passed in or default to 8 hours.
       const ttlTime = new pulumitime.Offset("ttltime", {offsetMinutes: (args.ttlMinutes || (8*60))}, { parent: this }).rfc3339
