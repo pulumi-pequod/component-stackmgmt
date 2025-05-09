@@ -38,11 +38,13 @@ export class StackSettings extends pulumi.ComponentResource {
     buildDeploymentConfig(npwStack, stack, org, project, pulumiAccessToken).then(deploymentConfig => {
       // Check if this is a no-code deployment. If not, then we need to manage the deployment settings.
       if (deploymentConfig) { // it's not a no-code deployment
+        pulumi.log.info(`#1 Deployment settings for ${stack}: ${JSON.stringify(deploymentConfig)}`)
         // Non-no-code so we need to manage the purge settings.
         deleteStackTagValue = args.deleteStack || "True"
         // Set the stack's deployment settings based on what was returned by the buildDeploymentSettings function.
         const deploymentSettings = new pulumiservice.DeploymentSettings(`${name}-deployment-settings`, deploymentConfig, {parent: this, retainOnDelete: true})
       } else {
+        pulumi.log.info(`#2 Deployment settings for ${stack}: ${JSON.stringify(deploymentConfig)}`)
         // Need to set the delete_stack tag to "StackOnly" to prevent the purge automation from trying to delete the repo which points at the 
         // templates repo - we definitely don't want to delete the templates repo.
         deleteStackTagValue = "StackOnly"
