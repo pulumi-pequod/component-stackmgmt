@@ -43,7 +43,7 @@ export class StackSettings extends pulumi.ComponentResource {
 
     buildDeploymentConfig(npwStack, stack, org, project, pulumiAccessToken).then(deploymentConfig => {
       // Check if this is a no-code deployment. If not, then we need to manage the deployment settings.
-      if (deploymentConfig != null) { // it's not a no-code deployment
+      if (deploymentConfig) { // it's not a no-code deployment
         // Set the stack's deployment settings based on what was returned by the buildDeploymentSettings function.
         const deploymentSettings = new pulumiservice.DeploymentSettings(`${name}-deployment-settings`, deploymentConfig, {parent: this, retainOnDelete: true})
       } else {
