@@ -125,11 +125,8 @@ export const buildDeploymentConfig = async (npwStack: string, stack: string, org
     // Check if this is actually a no-code deployment.
     // If so, we'll overload the branch setting to indicate it's no-code 
     if  (baseDeploymentSettings.sourceContext.template) {
-      pulumi.log.info(`No-code deployment detected for ${stack}.`)
       deploymentConfig.sourceContext = undefined
     }
-
-    pulumi.log.info(`After no-code check`)
 
     return(deploymentConfig)
   })
