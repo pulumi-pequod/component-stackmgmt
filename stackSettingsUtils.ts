@@ -63,32 +63,21 @@ const getDeploymentSettings = async (org: string, project: string, stack: string
 // Builds deployment settings using existing settings and modifying them as needed.
 export const buildDeploymentConfig = async (npwStack: string, stack: string, org: string, project: string, pulumiAccessToken: string) => {
 
-  // Figure out if stack is created by user (e.g. pulumi stack init ...)
-  let userCreatedStack = false
-  if ((stack != npwStack) && !(stack.includes(`pr-pulumi-${org}-${project}`))) {
-    userCreatedStack = true
-  }
+  // In the new NSW world, we'll always assume Pulumi Cloud has primed the deployment settings for new stacks from the original stack.
+  // So we do the same.
+  const baseStack = npwStack
 
-  // Get the settings from the original NPW-created stack or review stack to reuse as a basis for new deployment settings for any (non-review) new stacks.
-  let baseStack = npwStack
-  if (stack.includes(`pr-pulumi-${org}-${project}`)) {
-    baseStack = stack
-  }
+  // Get the deployment settings from the original stack and use them as a basis for tweaking the stack's deployment settings.
+  // The main tweaks are:
+  // - enable caching
+  // - add the PULUMI_ACCESS_TOKEN as an environment variable for the deployment so it has the permissions needed to access other stacks.
   const deploymentConfig = getDeploymentSettings(org, project, baseStack).then(baseDeploymentSettings => {
 
     // Use what was in the base deployment settings.
     let branch = baseDeploymentSettings.sourceContext.git?.branch || "refs/heads/main"
 
-    ///// Given the new "New Stack Wizard" capability, we can't assume that the stack name is the same as the branch name.
-    ///// So this logic is being disabled for now. 
-    ///// If you create a new stack on the command line and it has it's own branch, then you'll need to update the branch in the deployment settings in the UI for the time being.
-    ///// TODO: Come up with a better flow that works for NSW and CLI created stacks.
-    // // But, if this is a user-created stack, then we need to modify the source context settings to point at a branch name that matches the stack name.
-    // if (userCreatedStack) {
-    //   branch = "refs/heads/"+stack
-    // }
-
-    // Carry over the github settings as-is
+    // Carry over the github settings from the original stack as-is
+    // This means that all stacks live on the same branch and repo as the original stack.
     const githubSettingsStringified:pulumi.Output<string> = pulumi.jsonStringify({
       repository: baseDeploymentSettings.gitHub?.repository,
       paths: baseDeploymentSettings.gitHub?.paths,
@@ -128,7 +117,7 @@ export const buildDeploymentConfig = async (npwStack: string, stack: string, org
     }
 
     // Check if this is actually a no-code deployment.
-    // If so, we'll overload the branch setting to indicate it's no-code 
+    // If so, we'll overload the branch setting to indicate it's no-code. 
     if  (baseDeploymentSettings.sourceContext.template) {
       deploymentConfig.sourceContext = undefined
     }
