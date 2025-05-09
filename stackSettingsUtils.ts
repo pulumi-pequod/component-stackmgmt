@@ -74,11 +74,11 @@ export const buildDeploymentConfig = async (npwStack: string, stack: string, org
   if (stack.includes(`pr-pulumi-${org}-${project}`)) {
     baseStack = stack
   }
-  const deploymentConfig = getDeploymentSettings(org, project, baseStack).then(baseDeploymentSettings => {
 
-    let deploymentConfig = {} as pulumiservice.DeploymentSettingsArgs
+  let deploymentConfig = {} as pulumiservice.DeploymentSettingsArgs
+  // const deploymentConfig = getDeploymentSettings(org, project, baseStack).then(baseDeploymentSettings => {
+  getDeploymentSettings(org, project, baseStack).then(baseDeploymentSettings => {
 
-    /// DEBUG
     pulumi.log.info(`Base deployment settings for stack ${baseStack} are: ${JSON.stringify(baseDeploymentSettings)}`)
 
     // Check if this is a no-code deployment. If not, then we need to manage the deployment settings. 
@@ -130,8 +130,8 @@ export const buildDeploymentConfig = async (npwStack: string, stack: string, org
         }
       }
     } 
-    return(deploymentConfig)
   })
+  pulumi.log.info(`Deployment settings being returned are: ${JSON.stringify(deploymentConfig)}`)
   return(deploymentConfig)
 }
 
