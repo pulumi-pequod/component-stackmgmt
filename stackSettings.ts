@@ -29,10 +29,10 @@ export class StackSettings extends pulumi.ComponentResource {
     // Because the tag needs to remain on destroy and the provider balks if the stack tag already exists 
     // (which would be the case on a pulumi up after a destroy), using the pulumiservice provider for this tag is not feasible.
     // So, just hit the Pulumi Cloud API set the tag and that way it is not deleted on destroy.
-    let tagName = "delete_stack"
+    let deleteStackTagName = "delete_stack"
     // If deleteStack is not set, default to "True" since we generally want things cleaned up.
     let tagValue = args.deleteStack || "True"
-    setTag(stackFqdn, tagName, tagValue)
+    setTag(stackFqdn, deleteStackTagName, tagValue)
     
     //// Deployment Settings Management ////
     // If a new stack is created by the user (e.g. `pulumi stack init pequod/test`) there are a couple of assumptions:
@@ -42,31 +42,38 @@ export class StackSettings extends pulumi.ComponentResource {
     // Get the settings from the original NPW-created stack or review stack to reuse as a basis for new deployment settings for any (non-review) new stacks.
 
     buildDeploymentConfig(npwStack, stack, org, project, pulumiAccessToken).then(deploymentConfig => {
-    // Set the stack's deployment settings based on what was returned by the buildDeploymentSettings function.
-      const deploymentSettings = new pulumiservice.DeploymentSettings(`${name}-deployment-settings`, deploymentConfig, {parent: this, retainOnDelete: true})
-      //// TTL Schedule ////
-      // Calculate the TTL time based on the TTL minutes passed in or default to 8 hours.
-      const ttlTime = new pulumitime.Offset("ttltime", {offsetMinutes: (args.ttlMinutes || (8*60))}, { parent: this }).rfc3339
-      const ttlSchedule = new pulumiservice.TtlSchedule(`${name}-ttlschedule`, {
-        organization: org,
-        project: project,
-        stack: stack,
-        timestamp: ttlTime,
-        deleteAfterDestroy: false,
-      }, { parent: this, dependsOn: [deploymentSettings] }) 
+      // Check if this is a no-code deployment. If not, then we need to manage the deployment settings.
+      if (deploymentConfig != null) { // it's not a no-code deployment
+        // Set the stack's deployment settings based on what was returned by the buildDeploymentSettings function.
+        const deploymentSettings = new pulumiservice.DeploymentSettings(`${name}-deployment-settings`, deploymentConfig, {parent: this, retainOnDelete: true})
+        //// TTL Schedule ////
+        // Calculate the TTL time based on the TTL minutes passed in or default to 8 hours.
+        const ttlTime = new pulumitime.Offset("ttltime", {offsetMinutes: (args.ttlMinutes || (8*60))}, { parent: this }).rfc3339
+        const ttlSchedule = new pulumiservice.TtlSchedule(`${name}-ttlschedule`, {
+          organization: org,
+          project: project,
+          stack: stack,
+          timestamp: ttlTime,
+          deleteAfterDestroy: false,
+        }, { parent: this, dependsOn: [deploymentSettings] }) 
 
-      //// Drift Schedule ////
-      let remediation = true // assume we want to remediate
-      if ((args.driftManagement) && (args.driftManagement != "Correct")) {
-        remediation = false // only do drift detection
+        //// Drift Schedule ////
+        let remediation = true // assume we want to remediate
+        if ((args.driftManagement) && (args.driftManagement != "Correct")) {
+          remediation = false // only do drift detection
+        }
+        const driftSchedule = new pulumiservice.DriftSchedule(`${name}-driftschedule`, {
+          organization: org,
+          project: project,
+          stack: stack,
+          scheduleCron: "0 * * * *",
+          autoRemediate: remediation,
+        }, { parent: this, dependsOn: [deploymentSettings] }) 
+      } else {
+        // Need to set the delete_stack tag to "StackOnly" to prevent the purge automation from trying to delete the repo which points at the 
+        // templates repo - we definitely don't want to delete the templates repo.
+        setTag(stackFqdn, deleteStackTagName, "StackOnly")
       }
-      const driftSchedule = new pulumiservice.DriftSchedule(`${name}-driftschedule`, {
-        organization: org,
-        project: project,
-        stack: stack,
-        scheduleCron: "0 * * * *",
-        autoRemediate: remediation,
-      }, { parent: this, dependsOn: [deploymentSettings] }) 
     })
 
     //// Team Stack Assignment ////

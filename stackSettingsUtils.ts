@@ -76,51 +76,57 @@ export const buildDeploymentConfig = async (npwStack: string, stack: string, org
   }
   const deploymentConfig = getDeploymentSettings(org, project, baseStack).then(baseDeploymentSettings => {
 
-    // Use what was in the base deployment settings.
-    let branch = baseDeploymentSettings.sourceContext.git?.branch || "refs/heads/main"
-    // But, if this is a user-created stack, then we need to modify the source context settings to point at a branch name that matches the stack name.
-    if (userCreatedStack) {
-      branch = "refs/heads/"+stack
-    }
+    let deploymentConfig = {} as pulumiservice.DeploymentSettingsArgs
 
-    // Carry over the github settings as-is
-    const githubSettingsStringified:pulumi.Output<string> = pulumi.jsonStringify({
-      repository: baseDeploymentSettings.gitHub?.repository,
-      paths: baseDeploymentSettings.gitHub?.paths,
-      previewPullRequests: baseDeploymentSettings.gitHub?.previewPullRequests, 
-      pullRequestTemplate: baseDeploymentSettings.gitHub?.pullRequestTemplate,
-      deployCommits: baseDeploymentSettings.gitHub?.deployCommits,
-    })
-    const githubSettings = pulumi.jsonParse(githubSettingsStringified) as pulumiservice.types.input.DeploymentSettingsGithubArgs
+    // Check if this is a no-code deployment. If not, then we need to manage the deployment settings. 
+    if (baseDeploymentSettings.sourceContext.template?.sourceType != "no-code") {
 
-    // Carry over any pre-run commands from the base deployment settings.
-    const preRunCommands = baseDeploymentSettings.operationContext?.preRunCommands
+      // Use what was in the base deployment settings.
+      let branch = baseDeploymentSettings.sourceContext.git?.branch || "refs/heads/main"
+      // But, if this is a user-created stack, then we need to modify the source context settings to point at a branch name that matches the stack name.
+      if (userCreatedStack) {
+        branch = "refs/heads/"+stack
+      }
 
-    // Construct the deployment settings.
-    // const deploymentSettings: pulumiservice.DeploymentSettingsArgs = {
-    const deploymentConfig: pulumiservice.DeploymentSettingsArgs = {
-      organization: org,
-      project: project,
-      stack: stack,
-      github: githubSettings,
-      cacheOptions: {
-        enable: true // enable caching to speed up deployments
-      },
-      operationContext: {
-        // Add the access token from the environment as an env variable for the deployment.
-        // This overrides the deployment stack token to enable accessing the template stack's config for review stacks and to enable stack references (where needed) 
-        // Keeping for future reference, but this following code does not play well with the .NET SDK generation. It'll throw an error about type is not a string.
-        // environmentVariables: { ...settings.operationContext.environmentVariables, ...{PULUMI_ACCESS_TOKEN: pulumi.secret(pulumiAccessToken)}}
-        environmentVariables: { PULUMI_ACCESS_TOKEN: pulumi.secret(pulumiAccessToken) },
-        // Pass along the pre-run commands from the base deployment settings.
-        preRunCommands: preRunCommands
-      },
-      sourceContext: {
-        git: {
-          branch: branch,
+      // Carry over the github settings as-is
+      const githubSettingsStringified:pulumi.Output<string> = pulumi.jsonStringify({
+        repository: baseDeploymentSettings.gitHub?.repository,
+        paths: baseDeploymentSettings.gitHub?.paths,
+        previewPullRequests: baseDeploymentSettings.gitHub?.previewPullRequests, 
+        pullRequestTemplate: baseDeploymentSettings.gitHub?.pullRequestTemplate,
+        deployCommits: baseDeploymentSettings.gitHub?.deployCommits,
+      })
+      const githubSettings = pulumi.jsonParse(githubSettingsStringified) as pulumiservice.types.input.DeploymentSettingsGithubArgs
+
+      // Carry over any pre-run commands from the base deployment settings.
+      const preRunCommands = baseDeploymentSettings.operationContext?.preRunCommands
+
+      // Construct the deployment settings.
+      // const deploymentSettings: pulumiservice.DeploymentSettingsArgs = {
+      deploymentConfig = {
+        organization: org,
+        project: project,
+        stack: stack,
+        github: githubSettings,
+        cacheOptions: {
+          enable: true // enable caching to speed up deployments
+        },
+        operationContext: {
+          // Add the access token from the environment as an env variable for the deployment.
+          // This overrides the deployment stack token to enable accessing the template stack's config for review stacks and to enable stack references (where needed) 
+          // Keeping for future reference, but this following code does not play well with the .NET SDK generation. It'll throw an error about type is not a string.
+          // environmentVariables: { ...settings.operationContext.environmentVariables, ...{PULUMI_ACCESS_TOKEN: pulumi.secret(pulumiAccessToken)}}
+          environmentVariables: { PULUMI_ACCESS_TOKEN: pulumi.secret(pulumiAccessToken) },
+          // Pass along the pre-run commands from the base deployment settings.
+          preRunCommands: preRunCommands
+        },
+        sourceContext: {
+          git: {
+            branch: branch,
+          }
         }
       }
-    }
+    } 
     return(deploymentConfig)
   })
   return(deploymentConfig)
@@ -141,11 +147,15 @@ interface OperationContext {
   options?: object
 }
 interface SourceContext {
-  git: Git
+  git?: Git
+  template?: Template
 }
 interface Git {
   branch: string
   repoDir?: string
+}
+interface Template {
+  sourceType: string
 }
 interface GitHub {
   repository: string
