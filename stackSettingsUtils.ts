@@ -98,7 +98,7 @@ export const buildDeploymentConfig = async (npwStack: string, stack: string, org
 
     // Construct the deployment settings.
     // const deploymentSettings: pulumiservice.DeploymentSettingsArgs = {
-    const deploymentConfig: pulumiservice.DeploymentSettingsArgs = {
+    let deploymentConfig: pulumiservice.DeploymentSettingsArgs = {
       organization: org,
       project: project,
       stack: stack,
@@ -121,6 +121,13 @@ export const buildDeploymentConfig = async (npwStack: string, stack: string, org
         }
       }
     }
+
+    // Check if this is actually a no-code deployment.
+    // If so, we'll overload the branch setting to indicate it's no-code 
+    if  (baseDeploymentSettings.sourceContext.template) {
+      deploymentConfig.sourceContext = undefined
+    }
+
     return(deploymentConfig)
   })
   return(deploymentConfig)
@@ -141,11 +148,15 @@ interface OperationContext {
   options?: object
 }
 interface SourceContext {
-  git: Git
+  git?: Git
+  template?: Template
 }
 interface Git {
   branch: string
   repoDir?: string
+}
+interface Template {
+  sourceType: string
 }
 interface GitHub {
   repository: string
