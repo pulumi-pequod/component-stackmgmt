@@ -61,7 +61,8 @@ const getDeploymentSettings = async (org: string, project: string, stack: string
 }
 
 // Builds deployment settings using existing settings and modifying them as needed.
-export const buildDeploymentConfig = async (npwStack: string, stack: string, org: string, project: string, pulumiAccessToken: string) => {
+var deploymentConfig: pulumiservice.DeploymentSettingsArgs | undefined
+export const buildDeploymentConfig: (npwStack: string, stack: string, org: string, project: string, pulumiAccessToken: string) => Promise<pulumiservice.DeploymentSettingsArgs | undefined | void> = async(npwStack: string, stack: string, org: string, project: string, pulumiAccessToken: string) => {
 
   // Figure out if stack is created by user (e.g. pulumi stack init ...)
   let userCreatedStack = false
@@ -75,12 +76,15 @@ export const buildDeploymentConfig = async (npwStack: string, stack: string, org
     baseStack = stack
   }
 
-  var deploymentConfig: pulumiservice.DeploymentSettingsArgs | undefined = undefined
   // const deploymentConfig = getDeploymentSettings(org, project, baseStack).then(baseDeploymentSettings => {
   getDeploymentSettings(org, project, baseStack).then(baseDeploymentSettings => {
 
+    pulumi.log.info(`Base deployment settings for ${baseStack}: ${JSON.stringify(baseDeploymentSettings)}`)
+
     // This is not a no-code deployment so we need to manage the deployment settings. 
     if (baseDeploymentSettings.sourceContext.git) {
+
+      pulumi.log.info("processing deployment settings")
 
       // Use what was in the base deployment settings.
       let branch = baseDeploymentSettings.sourceContext.git?.branch || "refs/heads/main"
@@ -128,9 +132,11 @@ export const buildDeploymentConfig = async (npwStack: string, stack: string, org
         }
       }
     } 
+    pulumi.log.info(`Return #1: ${JSON.stringify(deploymentConfig)}`)
     return(deploymentConfig)
   })
-  return(deploymentConfig)
+  // pulumi.log.info(`Return #2: ${JSON.stringify(deploymentConfig)}`)
+  // return(deploymentConfig)
 }
 
 // Deployment Settings API Related //
