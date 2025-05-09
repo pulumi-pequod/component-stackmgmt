@@ -1,7 +1,6 @@
 {
     "name": "stackmgmt",
     "description": "Abstraction for managing stack deployment and related settings.",
-    "version": "1.0.0",
     "dependencies": {
         "@pulumi/command": "^1.0.2",
         "@pulumi/pulumi": "^3.160.0",
