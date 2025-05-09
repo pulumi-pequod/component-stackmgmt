@@ -75,13 +75,13 @@ export const buildDeploymentConfig = async (npwStack: string, stack: string, org
     baseStack = stack
   }
 
-  let deploymentConfig = {} as pulumiservice.DeploymentSettingsArgs
+  var deploymentConfig: pulumiservice.DeploymentSettingsArgs | undefined = undefined
   // const deploymentConfig = getDeploymentSettings(org, project, baseStack).then(baseDeploymentSettings => {
   getDeploymentSettings(org, project, baseStack).then(baseDeploymentSettings => {
 
     pulumi.log.info(`Base deployment settings for stack ${baseStack} are: ${JSON.stringify(baseDeploymentSettings)}`)
 
-    // Check if this is a no-code deployment. If not, then we need to manage the deployment settings. 
+    // This is not a no-code deployment so we need to manage the deployment settings. 
     if (baseDeploymentSettings.sourceContext.template?.sourceType != "no-code") {
 
       // Use what was in the base deployment settings.
