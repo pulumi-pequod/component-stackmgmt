@@ -35,6 +35,31 @@ export const setTag = async (stackFqdn: string, tagName: string, tagValue: strin
   } 
 }
 
+// Uses Pulumi Cloud API to set the PULUMI_ACCESS_TOKEN environment variable for a stack.
+export const setPulumiAccessToken = async (pulumiAccessToken: string, stackFqdn: string ) => {
+
+  const headers = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'Authorization': `token ${pulumiAccessToken}`
+  };
+
+  // Add the PULUMI_ACCESS_TOKEN environment variable to the stack's deployment settings.
+  const setAccessTokenEnvVarUrl = `https://api.pulumi.com/api/stacks/${stackFqdn}/deployments/settings`
+  const setResponse = await fetch(setAccessTokenEnvVarUrl, {
+      method: "POST",
+      body: `{"operationContext": {"environmentVariables": {"PULUMI_ACCESS_TOKEN": {"secret":"${pulumiAccessToken}"}}}}`,
+      headers,
+  })
+  if (!setResponse.ok) {
+      let errMessage = "";
+      try {
+          errMessage = await setResponse.text();
+      } catch { }
+      throw new Error(`failed to set PULUMI_ACCESS_TOKEN environment variable for stack, ${stackFqdn}: ${errMessage}`);
+  } 
+}
+
 // use API to get the deployment settings for a stack.
 const getDeploymentSettings = async (org: string, project: string, stack: string) => {
   const headers = {
