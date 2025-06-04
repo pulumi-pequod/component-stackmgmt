@@ -2,7 +2,7 @@ import * as pulumi from "@pulumi/pulumi";
 import * as pulumiservice from "@pulumi/pulumiservice";
 import * as pulumitime from "@pulumiverse/time";
 
-import { setTag, buildDeploymentConfig} from "./stackSettingsUtils"
+import { buildDeploymentConfig, setPulumiAccessToken, setTag } from "./stackSettingsUtils"
 import { npwStack, org, pulumiAccessToken }  from "./stackSettingsConfig"
 
 // Interface for StackSettings
@@ -41,6 +41,9 @@ export class StackSettings extends pulumi.ComponentResource {
         // Need to set the delete_stack tag to "StackOnly" to prevent the purge automation from trying to delete the repo which points at the 
         // templates repo - we definitely don't want to delete the templates repo.
         deleteStackTagValue = "StackOnly"
+
+        // Still need to set the PULUMI_ACCESS_TOKEN environment variable for the no-code stack.
+        setPulumiAccessToken(pulumiAccessToken, stackFqdn)
       }
 
       //// Purge Stack Tag ////
