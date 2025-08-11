@@ -2,7 +2,7 @@ import * as pulumi from "@pulumi/pulumi";
 import * as pulumiservice from "@pulumi/pulumiservice";
 import * as pulumitime from "@pulumiverse/time";
 
-import { buildDeploymentConfig, setPulumiAccessToken, setTag } from "./stackSettingsUtils"
+import { buildDeploymentConfig, setPulumiAccessToken, setTag, createService } from "./stackSettingsUtils"
 import { npwStack, org, pulumiAccessToken }  from "./stackSettingsConfig"
 
 // Interface for StackSettings
@@ -23,6 +23,8 @@ export class StackSettings extends pulumi.ComponentResource {
     const project = pulumi.getProject()
     const stack = pulumi.getStack()
     const stackFqdn = `${org}/${project}/${stack}`
+    const teamAssignment = args.teamAssignment ?? "DevTeam"
+
 
     //// Deployment Settings Management ////
     buildDeploymentConfig(npwStack, stack, org, project, pulumiAccessToken).then(deploymentConfig => {
@@ -44,6 +46,9 @@ export class StackSettings extends pulumi.ComponentResource {
 
         // Still need to set the PULUMI_ACCESS_TOKEN environment variable for the no-code stack.
         setPulumiAccessToken(pulumiAccessToken, stackFqdn)
+
+        // Create a service that joins the no-code stack and related environment that was created.
+        const service = createService(org, project, stack, teamAssignment, pulumiAccessToken)
       }
 
       //// Purge Stack Tag ////
@@ -80,7 +85,6 @@ export class StackSettings extends pulumi.ComponentResource {
     })
     //// Team Stack Assignment ////
     // If no team name given, then assign to the "DevTeam"
-    const teamAssignment = args.teamAssignment ?? "DevTeam"
     const teamStackAssignment = new pulumiservice.TeamStackPermission(`${name}-team-stack-assign`, {
       organization: org,
       project: project,
