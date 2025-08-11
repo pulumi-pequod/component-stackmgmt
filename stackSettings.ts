@@ -48,7 +48,7 @@ export class StackSettings extends pulumi.ComponentResource {
         setPulumiAccessToken(pulumiAccessToken, stackFqdn)
 
         // Create a service that joins the no-code stack and related environment that was created.
-        const service = createService(org, project, stack, teamAssignment, pulumiAccessToken)
+        const service = createService(org, project, stack, teamAssignment, pulumiAccessToken, this)
       }
 
       //// Purge Stack Tag ////
