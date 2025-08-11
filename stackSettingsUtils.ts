@@ -1,5 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as pulumiservice from "@pulumi/pulumiservice";
+import * as command from "@pulumi/command";
 
 // Creates stack tags. Uses the API instead of the Pulumi service provider due to challenges when trying to recreate an existing tag.
 export const setTag = async (stackFqdn: string, tagName: string, tagValue: string) => {
@@ -36,54 +37,49 @@ export const setTag = async (stackFqdn: string, tagName: string, tagValue: strin
 }
 
 // Build a service that joins the no-code stack and related environment that was created.
-// Need to use API currently as the Pulumi service provider does not support this, yet.
+// Uses the Pulumi Command provider to create the service via the Pulumi API.
 // See: https://github.com/pulumi/pulumi-pulumiservice/issues/522
-export const createService = async (org: string, project: string, stack: string, teamAssignment: string, pulumiAccessToken: string) => {
+export const createService = (org: string, project: string, stack: string, teamAssignment: string, pulumiAccessToken: string, parent?: pulumi.Resource) => {
 
-  const headers = {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json', 
-    'Authorization': `token ${pulumiAccessToken}`
-  };
+  // Create the JSON payload for the service
+  const servicePayload = pulumi.jsonStringify({
+    name: `${project}-${stack}`,
+    description: `Service for no-code stack, ${project}/${stack}`,
+    ownerName: teamAssignment,
+    ownerType: "team",
+    items: [
+      {
+        type: "environment",
+        name: `${project}/${stack}`
+      },
+      {
+        type: "stack", 
+        name: `${project}/${stack}`
+      }
+    ]
+  });
 
-  // Create the service that joins the no-code stack and related environment.
-  const serviceUrl = `https://api.pulumi.com/api/orgs/${org}/services`;
+  // Use the Command provider to create the service via curl
+  const createServiceCommand = new command.local.Command(`create-service-${project}-${stack}`, {
+    create: pulumi.interpolate`curl -X POST \
+      -H "Accept: application/json" \
+      -H "Content-Type: application/json" \
+      -H "Authorization: token ${pulumiAccessToken}" \
+      -d '${servicePayload}' \
+      "https://api.pulumi.com/api/orgs/${org}/services"`,
+    
+    // Optional: Add a delete command to clean up the service on destroy
+    delete: pulumi.interpolate`curl -X DELETE \
+      -H "Authorization: token ${pulumiAccessToken}" \
+      "https://api.pulumi.com/api/orgs/${org}/services/${project}-${stack}"`,
+  }, { 
+    parent: parent,
+    // Ensure the command runs each time if the payload changes
+    replaceOnChanges: ["create"]
+  });
 
-  const createResponse = await fetch(serviceUrl, {
-      method: "POST",
-      body: `{
-        "name":"${project}-${stack}", 
-        "description":"Service for no-code stack, ${project}/${stack}", 
-        "ownerName": "${teamAssignment}",
-        "ownerType": "team", 
-        "items": [
-          {
-            "type": "environment",
-            "name": "${project}/${stack}"
-          },
-          {
-            "type": "stack",
-            "name": "${project}/${stack}"
-          }
-        ]
-      }`,
-      headers
-  })
-
-  // Check if the service creation was successful.
-  if (!createResponse.ok) {
-      let errMessage = "";
-      try {
-          errMessage = await createResponse.text();
-      } catch { }
-      throw new Error(`failed to create service for stack, ${project}/${stack}: ${errMessage}`);
-  } 
-
-  // Return the response from the service creation.
-  return await createResponse.json();
-} 
-
-// Uses Pulumi Cloud API to set the PULUMI_ACCESS_TOKEN environment variable for a stack.
+  return createServiceCommand;
+}// Uses Pulumi Cloud API to set the PULUMI_ACCESS_TOKEN environment variable for a stack.
 export const setPulumiAccessToken = async (pulumiAccessToken: string, stackFqdn: string ) => {
 
   const headers = {
