@@ -60,7 +60,7 @@ export const createService = (org: string, project: string, stack: string, teamA
   });
 
   // Use the Command provider to create the service via curl
-  const createServiceCommand = new command.local.Command(`create-service-${project}-${stack}`, {
+  const createServiceCommand = new command.local.Command(`service-${project}-${stack}`, {
     create: pulumi.interpolate`curl -X POST \
       -H "Accept: application/json" \
       -H "Content-Type: application/json" \
