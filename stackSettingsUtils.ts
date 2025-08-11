@@ -71,7 +71,8 @@ export const createService = (org: string, project: string, stack: string, teamA
     // Optional: Add a delete command to clean up the service on destroy
     delete: pulumi.interpolate`curl -X DELETE \
       -H "Authorization: token ${pulumiAccessToken}" \
-      "https://api.pulumi.com/api/orgs/${org}/services/${project}-${stack}"`,
+      "https://api.pulumi.com/api/orgs/${org}/services/team/${teamAssignment}/${project}-${stack}"`,
+
   }, { 
     parent: parent,
     // Ensure the command runs each time if the payload changes
@@ -79,7 +80,9 @@ export const createService = (org: string, project: string, stack: string, teamA
   });
 
   return createServiceCommand;
-}// Uses Pulumi Cloud API to set the PULUMI_ACCESS_TOKEN environment variable for a stack.
+}
+
+// Uses Pulumi Cloud API to set the PULUMI_ACCESS_TOKEN environment variable for a stack.
 export const setPulumiAccessToken = async (pulumiAccessToken: string, stackFqdn: string ) => {
 
   const headers = {
