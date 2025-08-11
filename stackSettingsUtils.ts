@@ -35,6 +35,54 @@ export const setTag = async (stackFqdn: string, tagName: string, tagValue: strin
   } 
 }
 
+// Build a service that joins the no-code stack and related environment that was created.
+// Need to use API currently as the Pulumi service provider does not support this, yet.
+// See: https://github.com/pulumi/pulumi-pulumiservice/issues/522
+export const createService = async (org: string, project: string, stack: string, teamAssignment: string, pulumiAccessToken: string) => {
+
+  const headers = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json', 
+    'Authorization': `token ${pulumiAccessToken}`
+  };
+
+  // Create the service that joins the no-code stack and related environment.
+  const serviceUrl = `https://api.pulumi.com/api/orgs/${org}/services`;
+
+  const createResponse = await fetch(serviceUrl, {
+      method: "POST",
+      body: `{
+        "name":"${project}-${stack}", 
+        "description":"Service for no-code stack, ${project}/${stack}", 
+        "ownerName": "${teamAssignment}",
+        "ownerType": "team", 
+        "items": [
+          {
+            "type": "environment",
+            "name": "${project}/${stack}"
+          },
+          {
+            "type": "stack",
+            "name": "${project}/${stack}"
+          }
+        ]
+      }`,
+      headers
+  })
+
+  // Check if the service creation was successful.
+  if (!createResponse.ok) {
+      let errMessage = "";
+      try {
+          errMessage = await createResponse.text();
+      } catch { }
+      throw new Error(`failed to create service for stack, ${project}/${stack}: ${errMessage}`);
+  } 
+
+  // Return the response from the service creation.
+  return await createResponse.json();
+} 
+
 // Uses Pulumi Cloud API to set the PULUMI_ACCESS_TOKEN environment variable for a stack.
 export const setPulumiAccessToken = async (pulumiAccessToken: string, stackFqdn: string ) => {
 
