@@ -7,10 +7,26 @@ import { npwStack, org, pulumiAccessToken }  from "./stackSettingsConfig"
 
 // Interface for StackSettings
 export interface StackSettingsArgs{
+  /**
+   * Time to live in minutes. Defaults to 480 (8 hours) if not provided.
+   **/
   ttlMinutes?: number,
+  /**
+   * Drift management setting. Options are "Correct" (default) or "DetectOnly".
+   **/
   driftManagement?: string,
+  /**
+   * Indicates if the stack should be deleted by the purge automation.
+   * Options are "True" (default) or "False".
+   */
   deleteStack?: string,
+  /**
+   * The team to assign the stack to. Defaults to "DevTeam". 
+   **/
   teamAssignment?: string, 
+  /**
+   * The Pulumi access token to use for API operations. 
+   **/
   pulumiAccessToken?: pulumi.Output<string>,
 }
 
