@@ -1,18 +1,6 @@
 # component-stacksettings
 Pulumi component that handles Pequod-related stack settings.
 
-# Inputs
-
-* ttlMinutes (Optional): Number of minutes to wait before destroying the stack. Defaults to 8 hours.
-* driftManagement (Optional): Set to `Correct` to correct drift if detected. Set to anything else to just detect drift. Defaults to `Correct`.
-* deleteStack (Optional): Whether stack should be purged. Set to `True` to have stack cleaned up overnight. Set to anything else to keep the stack. Defaults to `True`.
-* teamAssignment (Optional): Pulumi Team the stack should be assigned to. Defaults to `DevTeam`.
-* pulumiAccessToken (Optional): A Pulumi access token to use for the stack's Deployment settings. Defaults to a `DevTeam` team token.
-
-# Outputs
-
-None.
-
 # Usage
 ## Specify Package in `Pulumi.yaml`
 
