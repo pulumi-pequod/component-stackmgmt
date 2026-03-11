@@ -14,6 +14,7 @@ export const setStackTag = async (stackFqdn: string, tagName: string, tagValue: 
   };
 
   // Delete the tag if it exists. Don't worry if it doesn't.
+  // This is to avoid issues with trying to recreate an existing tag when the stack is recreated and the tag already exists.
   const deleteTagUrl = `https://api.pulumi.com/api/stacks/${stackFqdn}/tags/${tagName}`;
   const deleteResponse = await fetch(deleteTagUrl, {
     method: "DELETE",
@@ -47,6 +48,14 @@ export const setEnvTag = async (envFqdn: string, tagName: string, tagValue: stri
     'Content-Type': 'application/json',
     'Authorization': `token ${pulumiAccessToken}`
   };
+
+  // Delete the tag if it exists. Don't worry if it doesn't.
+  // This is to avoid issues with trying to recreate an existing tag when the stack is recreated and the tag already exists.
+  const deleteTagUrl = `https://api.pulumi.com/api/esc/environments/${envFqdn}/tags/${tagName}`;
+  const deleteResponse = await fetch(deleteTagUrl, {
+    method: "DELETE",
+    headers,
+  })
 
   // Set the tag.
   const setTagUrl = `https://api.pulumi.com/api/esc/environments/${envFqdn}/tags`;
