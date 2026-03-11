@@ -41,15 +41,20 @@ export class StackSettings extends pulumi.ComponentResource {
     const stackFqdn = `${org}/${project}/${stack}`
     const teamAssignment = args.teamAssignment ?? "DevTeam"
 
+    // All stacks need to have the Owner tag set for ABAC purposes, so get the team assignment value and set that as the Owner tag on the stack.
+    setStackTag(stackFqdn, "Owner", teamAssignment)
 
-    //// Deployment Settings Management ////
+    //// Deployment Settings and Git-backed vs No-Code handling ////
     buildDeploymentConfig(npwStack, stack, org, project, pulumiAccessToken).then(deploymentConfig => {
 
       // This is the value for the delete_stack tag that is set below on the stack. 
       // It varies depending on whether the stack is no-code or not
       var deleteStackTagValue: string 
 
-      // Check if this is a no-code deployment. If not, then we need to manage the deployment settings.
+      // There are some differences in how git-backed and no-code deployments are handled.
+      // Git-backed deployments have deployment settings that are managed and have a different "delete_stack" tag setting to tell the purge function to remove the repo.
+      // No-code deployments need the "delete_stack" tag set to "StackOnly" since there is no repo to delete. 
+      // Also no-code have an environment that was created that needs to be tagged and have a service created to link it to the stack.
       if (deploymentConfig.sourceContext) {  // GIT BACKED
         // Non-no-code so we need to manage the purge settings.
         deleteStackTagValue = args.deleteStack || "True"
@@ -63,10 +68,10 @@ export class StackSettings extends pulumi.ComponentResource {
         // Still need to set the PULUMI_ACCESS_TOKEN environment variable for the no-code stack.
         setPulumiAccessToken(pulumiAccessToken, stackFqdn)
 
-        // Set "Team" tag on environment that was auto created for no-code deployment to the stack name.
-        // The full environment name matches the stack name so just use the stack FQDN. 
-        // TODO: allow for different tag names and values.
-        setEnvTag(stackFqdn, "Team", stack)
+        // Set "Owner" tag on environment that was auto created for no-code deployment. 
+        // The "Owner" tag is set to the team assignment value and is used for ABAC to allow access.
+        // The stack FQDN matches the corresponding environment name so just use the stack FQDN. 
+        setEnvTag(stackFqdn, "Owner", teamAssignment)
 
         // Create a service that joins the no-code stack and related environment that was created.
         const service = createService(org, project, stack, teamAssignment, pulumiAccessToken, this)
@@ -104,15 +109,6 @@ export class StackSettings extends pulumi.ComponentResource {
         autoRemediate: remediation,
       }, { parent: this }) 
     })
-    //// Team Stack Assignment ////
-    // If no team name given, then assign to the "DevTeam"
-    const teamStackAssignment = new pulumiservice.TeamStackPermission(`${name}-team-stack-assign`, {
-      organization: org,
-      project: project,
-      stack: stack,
-      team: teamAssignment,
-      permission: pulumiservice.TeamStackPermissionScope.Admin
-    }, { parent: this, retainOnDelete: true })
 
     this.registerOutputs({});
   }
