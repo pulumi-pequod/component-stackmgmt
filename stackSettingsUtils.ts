@@ -3,7 +3,7 @@ import * as pulumiservice from "@pulumi/pulumiservice";
 import * as command from "@pulumi/command";
 
 // Creates stack tags. Uses the API instead of the Pulumi service provider due to challenges when trying to recreate an existing tag.
-export const setTag = async (stackFqdn: string, tagName: string, tagValue: string) => {
+export const setStackTag = async (stackFqdn: string, tagName: string, tagValue: string) => {
   // This may be the deployments automatically created access token or it may be one that is injected via config/environments
   const pulumiAccessToken = process.env["PULUMI_ACCESS_TOKEN"] || "notokenfound"
 
@@ -33,6 +33,34 @@ export const setTag = async (stackFqdn: string, tagName: string, tagValue: strin
           errMessage = await setResponse.text();
       } catch { }
       throw new Error(`failed to set ${tagName} tag for stack, ${stackFqdn}: ${errMessage}`);
+  } 
+}
+
+// Creates environment tags. Uses the API currently since Pulumi cloud provider does not currently support environment tags.
+// (Note: the provider supports environment version tags but those are different than environment tags and don't work for our ABAC needs).
+export const setEnvTag = async (envFqdn: string, tagName: string, tagValue: string) => {
+  // This may be the deployments automatically created access token or it may be one that is injected via config/environments
+  const pulumiAccessToken = process.env["PULUMI_ACCESS_TOKEN"] || "notokenfound"
+
+  const headers = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'Authorization': `token ${pulumiAccessToken}`
+  };
+
+  // Set the tag.
+  const setTagUrl = `https://api.pulumi.com/api/esc/environments/${envFqdn}/tags`;
+  const setResponse = await fetch(setTagUrl, {
+      method: "POST",
+      body: `{"name":"${tagName}","value":"${tagValue}"}`,
+      headers,
+  })
+  if (!setResponse.ok) {
+      let errMessage = "";
+      try {
+          errMessage = await setResponse.text();
+      } catch { }
+      throw new Error(`failed to set ${tagName} tag for environment, ${envFqdn}: ${errMessage}`);
   } 
 }
 

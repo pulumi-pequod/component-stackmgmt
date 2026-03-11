@@ -2,7 +2,7 @@ import * as pulumi from "@pulumi/pulumi";
 import * as pulumiservice from "@pulumi/pulumiservice";
 import * as pulumitime from "@pulumiverse/time";
 
-import { buildDeploymentConfig, setPulumiAccessToken, setTag, createService } from "./stackSettingsUtils"
+import { buildDeploymentConfig, setPulumiAccessToken, setStackTag, setEnvTag, createService } from "./stackSettingsUtils"
 import { npwStack, org, pulumiAccessToken }  from "./stackSettingsConfig"
 
 // Interface for StackSettings
@@ -50,18 +50,23 @@ export class StackSettings extends pulumi.ComponentResource {
       var deleteStackTagValue: string 
 
       // Check if this is a no-code deployment. If not, then we need to manage the deployment settings.
-      if (deploymentConfig.sourceContext) {
+      if (deploymentConfig.sourceContext) {  // GIT BACKED
         // Non-no-code so we need to manage the purge settings.
         deleteStackTagValue = args.deleteStack || "True"
         // Set the stack's deployment settings based on what was returned by the buildDeploymentSettings function.
         const deploymentSettings = new pulumiservice.DeploymentSettings(`${name}-deployment-settings`, deploymentConfig, {parent: this, retainOnDelete: true})
-      } else {
+      } else {  //NO CODE
         // Need to set the delete_stack tag to "StackOnly" to prevent the purge automation from trying to delete the repo which points at the 
         // templates repo - we definitely don't want to delete the templates repo.
         deleteStackTagValue = "StackOnly"
 
         // Still need to set the PULUMI_ACCESS_TOKEN environment variable for the no-code stack.
         setPulumiAccessToken(pulumiAccessToken, stackFqdn)
+
+        // Set "Team" tag on environment that was auto created for no-code deployment to the stack name.
+        // The full environment name matches the stack name so just use the stack FQDN. 
+        // TODO: allow for different tag names and values.
+        setEnvTag(stackFqdn, "Team", stack)
 
         // Create a service that joins the no-code stack and related environment that was created.
         const service = createService(org, project, stack, teamAssignment, pulumiAccessToken, this)
@@ -73,7 +78,7 @@ export class StackSettings extends pulumi.ComponentResource {
       // (which would be the case on a pulumi up after a destroy), using the pulumiservice provider for this tag is not feasible.
       // So, just hit the Pulumi Cloud API set the tag and that way it is not deleted on destroy.
       const deleteStackTagName = "delete_stack"
-      setTag(stackFqdn, deleteStackTagName, deleteStackTagValue)
+      setStackTag(stackFqdn, deleteStackTagName, deleteStackTagValue)
 
       //// TTL Schedule ////
       // Calculate the TTL time based on the TTL minutes passed in or default to 8 hours.
