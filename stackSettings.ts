@@ -45,7 +45,11 @@ export class StackSettings extends pulumi.ComponentResource {
     setStackTag(stackFqdn, "Owner", teamAssignment)
 
     //// Deployment Settings and Git-backed vs No-Code handling ////
-    buildDeploymentConfig(npwStack, stack, org, project, pulumiAccessToken).then(deploymentConfig => {
+    // NOTE: Pass the promise to registerOutputs() so the Pulumi runtime waits for it to
+    // settle before finalising the component. Without this, resources created inside the
+    // .then() callback race against registerOutputs({}) and may not be registered,
+    // causing Pulumi to delete them on the next update.
+    const outputs = buildDeploymentConfig(npwStack, stack, org, project, pulumiAccessToken).then(deploymentConfig => {
 
       // This is the value for the delete_stack tag that is set below on the stack. 
       // It varies depending on whether the stack is no-code or not
@@ -107,10 +111,12 @@ export class StackSettings extends pulumi.ComponentResource {
         stack: stack,
         scheduleCron: "0 * * * *",
         autoRemediate: remediation,
-      }, { parent: this }) 
+      }, { parent: this })
+
+      return {}
     })
 
-    this.registerOutputs({});
+    this.registerOutputs(outputs);
   }
 }
 
