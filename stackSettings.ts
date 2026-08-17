@@ -28,6 +28,14 @@ export interface StackSettingsArgs{
    * The Pulumi access token to use for API operations. 
    **/
   pulumiAccessToken?: pulumi.Output<string>,
+  /**
+   * Whether to run previews for pull requests. Defaults to true.
+   **/
+  previewPullRequests?: boolean,
+  /**
+   * Whether to run updates for pushed commits. Defaults to true.
+   **/
+  deployCommits?: boolean,
 }
 
 // Forces Pulumi stack settings for managing TTL and other settings.
@@ -49,7 +57,7 @@ export class StackSettings extends pulumi.ComponentResource {
     // settle before finalising the component. Without this, resources created inside the
     // .then() callback race against registerOutputs({}) and may not be registered,
     // causing Pulumi to delete them on the next update.
-    const outputs = buildDeploymentConfig(npwStack, stack, org, project, pulumiAccessToken).then(deploymentConfig => {
+    const outputs = buildDeploymentConfig(npwStack, stack, org, project, pulumiAccessToken, args.previewPullRequests, args.deployCommits).then(deploymentConfig => {
 
       // This is the value for the delete_stack tag that is set below on the stack. 
       // It varies depending on whether the stack is no-code or not
