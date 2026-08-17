@@ -170,7 +170,7 @@ const getDeploymentSettings = async (org: string, project: string, stack: string
 }
 
 // Builds deployment settings using existing settings and modifying them as needed.
-export const buildDeploymentConfig = async (npwStack: string, stack: string, org: string, project: string, pulumiAccessToken: string) => {
+export const buildDeploymentConfig = async (npwStack: string, stack: string, org: string, project: string, pulumiAccessToken: string, previewPullRequests: boolean = true, deployCommits: boolean = true) => {
 
   // In the new NSW world, we'll always assume Pulumi Cloud has primed the deployment settings for new stacks from the original stack.
   // So we do the same.
@@ -190,9 +190,9 @@ export const buildDeploymentConfig = async (npwStack: string, stack: string, org
     const githubSettingsStringified:pulumi.Output<string> = pulumi.jsonStringify({
       repository: baseDeploymentSettings.gitHub?.repository,
       paths: baseDeploymentSettings.gitHub?.paths,
-      previewPullRequests: baseDeploymentSettings.gitHub?.previewPullRequests, 
+      previewPullRequests: previewPullRequests,
       pullRequestTemplate: baseDeploymentSettings.gitHub?.pullRequestTemplate,
-      deployCommits: baseDeploymentSettings.gitHub?.deployCommits,
+      deployCommits: deployCommits,
     })
     const githubSettings = pulumi.jsonParse(githubSettingsStringified) as pulumiservice.types.input.DeploymentSettingsGithubArgs
 
